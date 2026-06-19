@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reto de Rectas: Paralelas y Perpendiculares</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f8fafc; /* Slate muy claro */
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            touch-action: manipulation;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: #4f46e5; /* Indigo */
+            text-align: center;
+            font-size: 1.6rem;
+            margin-bottom: 0.2rem;
+            line-height: 1.2;
+        }
+
+        .hud-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        #canvas-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 2px solid #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-option {
+            font-family: 'Fredoka One', cursive;
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-align: center;
+        }
+
+        .btn-option:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2);
+        }
+
+        .btn-paralelas { background-color: #3b82f6; } /* Azul */
+        .btn-perpendiculares { background-color: #10b981; } /* Verde */
+        .btn-secantes { background-color: #f59e0b; } /* Naranja */
+
+        .feedback-box {
+            width: 100%;
+            max-width: 400px;
+            min-height: 3.5rem;
+            border-radius: 8px;
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .feedback-correct {
+            background-color: #d1fae5;
+            color: #047857;
+            border: 2px solid #34d399;
+        }
+
+        .feedback-incorrect {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 2px solid #f87171;
+        }
+
+        /* Modal Final */
+        #gameOverModal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 90%;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-restart {
+            font-family: 'Fredoka One', cursive;
+            background-color: #4f46e5;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            margin-top: 1rem;
+            border: none;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 0 #3730a3;
+        }
+        .btn-restart:active { transform: translateY(4px); box-shadow: none; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Reto de Rectas</h1>
+    <p class="text-sm text-gray-500 font-bold mb-2 text-center tracking-wide">Prof. Andrés Durán</p>
+    
+    <div class="hud-container">
+        <div id="levelDisplay">Nivel: 1/10</div>
+        <div id="scoreDisplay">Puntos: 0</div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="feedbackBox" class="feedback-box"></div>
+
+    <div class="controls" id="controls">
+        <button class="btn-option btn-paralelas" onclick="checkAnswer('paralelas')">= Paralelas</button>
+        <button class="btn-option btn-perpendiculares" onclick="checkAnswer('perpendiculares')">⟂ Perpendiculares</button>
+        <button class="btn-option btn-secantes" onclick="checkAnswer('secantes')">× Secantes (No 90°)</button>
+    </div>
+
+    <!-- Modal de Fin de Juego -->
+    <div id="gameOverModal">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold text-indigo-600 mb-2" style="font-family: 'Fredoka One', cursive;">¡Reto Terminado!</h2>
+            <p id="finalScoreMsg" class="text-lg text-gray-700 mb-4 font-bold"></p>
+            <p id="finalRankMsg" class="text-md text-gray-500 mb-6"></p>
+            <button class="btn-restart" onclick="initGame()">Jugar de Nuevo</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const feedbackBox = document.getElementById('feedbackBox');
+        const controls = document.getElementById('controls');
+        const gameOverModal = document.getElementById('gameOverModal');
+
+        let unit = 0;
+        let originX = 0;
+        let originY = 0;
+        const gridLimit = 5; // El plano va de -5 a 5 para que las rectas se vean grandes
+
+        const TOTAL_LEVELS = 10;
+        let currentLevel = 1;
+        let score = 0;
+        let currentCorrectAnswer = '';
+        let currentLines = [];
+        let isProcessing = false;
+
+        // Direcciones posibles para las rectas (para asegurar cruces enteros o estéticos)
+        const vectors = [
+            {x: 1, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}, {x: 1, y: -1},
+            {x: 2, y: 1}, {x: 1, y: 2}, {x: 2, y: -1}, {x: 1, y: -2},
+            {x: 3, y: 1}, {x: 3, y: -1}
+        ];
+
+        function resizeCanvas() {
+            const size = Math.min(window.innerWidth - 32, 360); 
+            canvas.width = size;
+            canvas.height = size;
+            
+            unit = size / (gridLimit * 2); 
+            originX = size / 2;
+            originY = size / 2;
+            
+            if (currentLines.length > 0) draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function initGame() {
+            currentLevel = 1;
+            score = 0;
+            isProcessing = false;
+            gameOverModal.style.display = 'none';
+            controls.style.pointerEvents = 'auto';
+            controls.style.opacity = '1';
+            updateHUD();
+            resizeCanvas();
+            generateLevel();
+        }
+
+        function updateHUD() {
+            levelDisplay.textContent = `Nivel: ${currentLevel}/${TOTAL_LEVELS}`;
+            scoreDisplay.textContent = `Puntos: ${score}`;
+        }
+
+        // --- LÓGICA DE GENERACIÓN DE RECTAS ---
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function getSlopeText(v) {
+            if (v.x === 0) return "Indef."; // Recta vertical
+            if (v.y === 0) return "0";      // Recta horizontal
+            
+            let sign = (v.x * v.y < 0) ? "-" : "";
+            let num = Math.abs(v.y);
+            let den = Math.abs(v.x);
+            
+            // Simplificar la fracción matemáticamente
+            let gcd = function(a, b) { return b ? gcd(b, a % b) : a; };
+            let divisor = gcd(num, den);
+            num = num / divisor;
+            den = den / divisor;
+            
+            if (den === 1) return sign + num; // Número entero
+            return sign + num + "/" + den;    // Fracción (ej: 1/2)
+        }
+
+        function generateLevel() {
+            feedbackBox.style.opacity = '0';
+            
+            // Elegir tipo aleatorio (Paralelas, Perpendiculares, Secantes)
+            const types = ['paralelas', 'perpendiculares', 'secantes'];
+            currentCorrectAnswer = types[Math.floor(Math.random() * types.length)];
+            
+            currentLines = [];
+            
+            // Punto de intersección o anclaje principal (cerca del centro)
+            const px = randomInt(-2, 2);
+            const py = randomInt(-2, 2);
+            const p1 = {x: px, y: py};
+            
+            const v1 = vectors[Math.floor(Math.random() * vectors.length)];
+            const p2_v1 = {x: px + v1.x, y: py + v1.y};
+
+            if (currentCorrectAnswer === 'perpendiculares') {
+                // Vector 2 es ortogonal a Vector 1 (-y, x)
+                const v2 = {x: -v1.y, y: v1.x};
+                const p2_v2 = {x: px + v2.x, y: py + v2.y};
+                currentLines.push({ pA: p1, pB: p2_v1, v: v1, color: '#ef4444', m: getSlopeText(v1) }); // Rojo
+                currentLines.push({ pA: p1, pB: p2_v2, v: v2, color: '#3b82f6', m: getSlopeText(v2) }); // Azul
+            } 
+            else if (currentCorrectAnswer === 'paralelas') {
+                // Elegir un punto base aleatorio diferente para la segunda recta
+                let p3x, p3y;
+                do {
+                    p3x = randomInt(-3, 3);
+                    p3y = randomInt(-3, 3);
+                } while ((p3x - px) * v1.y === (p3y - py) * v1.x); // Asegurar que NO sean la misma línea colineal
+                
+                const pA2 = {x: p3x, y: p3y};
+                const pB2 = {x: p3x + v1.x, y: p3y + v1.y};
+                
+                currentLines.push({ pA: p1, pB: p2_v1, v: v1, color: '#ef4444', m: getSlopeText(v1) });
+                currentLines.push({ pA: pA2, pB: pB2, v: v1, color: '#3b82f6', m: getSlopeText(v1) });
+            } 
+            else if (currentCorrectAnswer === 'secantes') {
+                // Vector 2 debe ser diferente a v1 y no perpendicular
+                let v2;
+                do {
+                    v2 = vectors[Math.floor(Math.random() * vectors.length)];
+                } while (
+                    (v1.x * v2.y === v1.y * v2.x) || // Paralelas
+                    (v1.x * v2.x + v1.y * v2.y === 0)  // Perpendiculares (Producto punto = 0)
+                );
+                const p2_v2 = {x: px + v2.x, y: py + v2.y};
+                currentLines.push({ pA: p1, pB: p2_v1, v: v1, color: '#ef4444', m: getSlopeText(v1) });
+                currentLines.push({ pA: p1, pB: p2_v2, v: v2, color: '#3b82f6', m: getSlopeText(v2) });
+            }
+
+            draw();
+            isProcessing = false;
+        }
+
+        // --- LÓGICA DE DIBUJO ---
+        function getPixelCoords(gridX, gridY) {
+            return {
+                x: originX + gridX * unit,
+                y: originY - gridY * unit
+            };
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Cuadrícula
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            for (let i = -gridLimit; i <= gridLimit; i++) {
+                ctx.beginPath(); ctx.moveTo(originX + i * unit, 0); ctx.lineTo(originX + i * unit, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, originY - i * unit); ctx.lineTo(canvas.width, originY - i * unit); ctx.stroke();
+            }
+
+            // Ejes Principales
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height); ctx.stroke();
+        }
+
+        function drawLines() {
+            currentLines.forEach(line => {
+                ctx.strokeStyle = line.color;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                
+                // Generar puntos lejanos para simular recta infinita
+                const pStart = { x: line.pA.x - line.v.x * 20, y: line.pA.y - line.v.y * 20 };
+                const pEnd = { x: line.pA.x + line.v.x * 20, y: line.pA.y + line.v.y * 20 };
+
+                const pixStart = getPixelCoords(pStart.x, pStart.y);
+                const pixEnd = getPixelCoords(pEnd.x, pEnd.y);
+
+                // 1. Dibujar la línea principal
+                ctx.beginPath();
+                ctx.moveTo(pixStart.x, pixStart.y);
+                ctx.lineTo(pixEnd.x, pixEnd.y);
+                ctx.stroke();
+
+                // Convertir puntos base a píxeles
+                const pixA = getPixelCoords(line.pA.x, line.pA.y);
+                const pixB = getPixelCoords(line.pB.x, line.pB.y);
+
+                // 2. Dibujar los dos puntos resaltados y sus coordenadas (x, y)
+                [ {pix: pixA, pt: line.pA}, {pix: pixB, pt: line.pB} ].forEach(item => {
+                    // Círculo del punto
+                    ctx.beginPath();
+                    ctx.arc(item.pix.x, item.pix.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.lineWidth = 3;
+                    ctx.stroke(); // Borde del color de la recta
+
+                    // Etiqueta de la coordenada
+                    ctx.font = 'bold 12px Nunito';
+                    ctx.fillStyle = '#1e293b'; // Texto oscuro
+                    ctx.strokeStyle = '#ffffff'; // Contorno blanco
+                    ctx.lineWidth = 4;
+                    ctx.lineJoin = 'round';
+                    
+                    // Pintar contorno blanco primero para legibilidad contra el grid
+                    ctx.strokeText(`(${item.pt.x}, ${item.pt.y})`, item.pix.x + 8, item.pix.y - 8);
+                    ctx.fillText(`(${item.pt.x}, ${item.pt.y})`, item.pix.x + 8, item.pix.y - 8);
+                });
+
+                // 3. Dibujar el texto de la Pendiente (m = ...) en el centro
+                const midX = (pixA.x + pixB.x) / 2;
+                const midY = (pixA.y + pixB.y) / 2;
+                
+                // Vector normal en el canvas para separar el texto de la línea
+                const nx = -(pixB.y - pixA.y);
+                const ny = (pixB.x - pixA.x);
+                const nLen = Math.sqrt(nx*nx + ny*ny);
+                const offsetX = (nx / nLen) * 20; 
+                const offsetY = (ny / nLen) * 20;
+
+                ctx.font = 'bold 15px "Fredoka One", cursive';
+                ctx.fillStyle = line.color;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 5;
+                
+                ctx.strokeText(`m = ${line.m}`, midX + offsetX - 15, midY + offsetY + 5);
+                ctx.fillText(`m = ${line.m}`, midX + offsetX - 15, midY + offsetY + 5);
+            });
+        }
+
+        function draw() {
+            drawGrid();
+            drawLines();
+        }
+
+        // --- INTERACCIÓN ---
+        function checkAnswer(userAnswer) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const isCorrect = (userAnswer === currentCorrectAnswer);
+            
+            feedbackBox.className = 'feedback-box ' + (isCorrect ? 'feedback-correct' : 'feedback-incorrect');
+            
+            if (isCorrect) {
+                score++;
+                let extraInfo = '';
+                if(currentCorrectAnswer === 'paralelas') extraInfo = '¡Nota que tienen exactamente la misma pendiente (m)!';
+                if(currentCorrectAnswer === 'perpendiculares') extraInfo = '¡Nota que sus pendientes son invertidas y opuestas!';
+                
+                feedbackBox.innerHTML = `¡Correcto! ✅<br><span style="font-size:0.8rem; color:#065f46;">${extraInfo}</span>`;
+            } else {
+                let explanation = '';
+                if (currentCorrectAnswer === 'paralelas') explanation = 'Son <b>Paralelas</b>: Tienen la misma pendiente (m).';
+                else if (currentCorrectAnswer === 'perpendiculares') explanation = 'Son <b>Perpendiculares</b>: Forman 90° (pendientes invertidas).';
+                else explanation = 'Son <b>Secantes</b>: Se cruzan sin formar 90°.';
+                
+                feedbackBox.innerHTML = `¡Ups! ${explanation} ❌`;
+            }
+            
+            feedbackBox.style.opacity = '1';
+            updateHUD();
+
+            setTimeout(() => {
+                currentLevel++;
+                if (currentLevel > TOTAL_LEVELS) {
+                    endGame();
+                } else {
+                    updateHUD();
+                    generateLevel();
+                }
+            }, 2500); // Dar 2.5 segundos para leer la retroalimentación
+        }
+
+        function endGame() {
+            controls.style.pointerEvents = 'none';
+            controls.style.opacity = '0.5';
+            
+            document.getElementById('finalScoreMsg').textContent = `Lograste ${score} de ${TOTAL_LEVELS} puntos.`;
+            
+            let rank = "";
+            if (score === 10) rank = "¡Puntuación Perfecta! Eres un genio de la geometría. 🏆";
+            else if (score >= 7) rank = "¡Muy buen trabajo! Tienes gran vista matemática. 🌟";
+            else rank = "¡Buen esfuerzo! Sigue practicando para mejorar. 💪";
+            
+            document.getElementById('finalRankMsg').textContent = rank;
+            gameOverModal.style.display = 'flex';
+        }
+
+        // Iniciar
+        initGame();
+
+    </script>
+</body>
+</html>
